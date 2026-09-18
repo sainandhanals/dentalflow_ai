@@ -8,7 +8,8 @@ import {
   ClinicSettings, 
   ToastNotification,
   EnquiryStatus,
-  FollowUpStatus
+  FollowUpStatus,
+  DentalSpecialty
 } from '../types';
 import { 
   INITIAL_ENQUIRIES, 
@@ -17,6 +18,7 @@ import {
   INITIAL_WORKFLOWS, 
   INITIAL_SETTINGS 
 } from '../data/mockData';
+import { classifyEnquiry } from '../services/classificationService';
 
 export type PageId = 
   | 'dashboard' 
@@ -31,6 +33,8 @@ interface AIAssistantState {
   isOpen: boolean;
   enquiry?: Enquiry;
   patient?: Patient;
+  procedure?: string;
+  specialty?: string;
   objective?: string;
   tone?: 'Professional' | 'Friendly' | 'Concise';
 }
@@ -52,6 +56,8 @@ interface DentalFlowContextType {
   markEnquiryReviewed: (id: string) => void;
   markEnquiryConverted: (id: string) => void;
   saveEnquiryDraft: (id: string, draft: string) => void;
+  confirmEnquiryClassification: (id: string) => void;
+  updateEnquiryClassification: (id: string, updated: { procedure: string; specialty: DentalSpecialty; intent?: string }) => void;
 
   // Patients
   patients: Patient[];
@@ -108,7 +114,7 @@ export const DentalFlowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Load or fallback to mock data
   const [enquiries, setEnquiries] = useState<Enquiry[]>(() => {
-    const saved = localStorage.getItem('dentalflow_enquiries');
+    const saved = localStorage.getItem('dentalflow_enquiries_v2');
     return saved ? JSON.parse(saved) : INITIAL_ENQUIRIES;
   });
 
@@ -149,7 +155,7 @@ export const DentalFlowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Sync to local storage
   useEffect(() => {
-    localStorage.setItem('dentalflow_enquiries', JSON.stringify(enquiries));
+    localStorage.setItem('dentalflow_enquiries_v2', JSON.stringify(enquiries));
   }, [enquiries]);
 
   useEffect(() => {
@@ -183,23 +189,29 @@ export const DentalFlowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Enquiries operations
   const addEnquiry = (enquiryData: Partial<Enquiry>) => {
     const newId = `ENQ-2024-${String(enquiries.length + 1).padStart(3, '0')}`;
+    
+    // Run automated classification service if not explicitly supplied
+    const autoClass = enquiryData.aiClassification || classifyEnquiry(enquiryData.fullMessage || enquiryData.enquirySummary || '');
+    const determinedProcedure = enquiryData.procedure || autoClass.procedure;
+    const determinedSpecialty = (enquiryData.specialty || autoClass.specialty || 'General Dentistry') as DentalSpecialty;
+
     const newEnquiry: Enquiry = {
       id: newId,
       patientName: enquiryData.patientName || 'New Enquirer',
       patientEmail: enquiryData.patientEmail || 'patient@demo.example',
       patientPhone: enquiryData.patientPhone || '+1 (555) 000-0000',
-      enquirySummary: enquiryData.enquirySummary || 'General consultation request',
-      fullMessage: enquiryData.fullMessage || 'I would like more information on booking an appointment.',
-      service: enquiryData.service || 'General Dentistry',
+      enquirySummary: enquiryData.enquirySummary || `Consultation request for ${determinedProcedure}`,
+      fullMessage: enquiryData.fullMessage || `Patient contacted clinic inquiring about ${determinedProcedure} services and scheduling.`,
+      service: determinedSpecialty,
+      procedure: determinedProcedure,
+      specialty: determinedSpecialty,
       source: enquiryData.source || 'Website',
-      aiClassification: enquiryData.aiClassification || {
-        intent: 'General Consultation Request',
-        serviceCategory: enquiryData.service || 'General Dentistry',
-        suggestedAction: 'Offer standard initial examination consultation and booking calendar.',
-        confidence: 93,
-        priorityReasoning: 'Newly created enquiry queued for front-desk triage.',
+      aiClassification: {
+        ...autoClass,
+        procedure: determinedProcedure,
+        specialty: determinedSpecialty,
       },
-      priority: enquiryData.priority || 'Medium',
+      priority: enquiryData.priority || (autoClass.intent.includes('Urgent') ? 'Urgent Review' : 'High'),
       status: 'New',
       receivedAt: 'Just now',
       timestamp: new Date().toISOString(),
@@ -209,7 +221,7 @@ export const DentalFlowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         {
           id: `note-${Date.now()}`,
           author: 'System',
-          text: 'Enquiry manually added by clinic staff. AI pre-classification generated.',
+          text: `Enquiry ingested. Auto-detected procedure: "${determinedProcedure}" under ${determinedSpecialty} (${autoClass.confidence}% confidence).`,
           createdAt: 'Just now'
         }
       ]
@@ -218,8 +230,8 @@ export const DentalFlowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setEnquiries((prev) => [newEnquiry, ...prev]);
     addToast({
       type: 'success',
-      title: 'Enquiry Added',
-      message: `Enquiry for ${newEnquiry.patientName} created successfully.`
+      title: 'Enquiry Added & Classified',
+      message: `Detected: ${determinedProcedure} (${determinedSpecialty}).`
     });
   };
 
@@ -327,6 +339,91 @@ export const DentalFlowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       type: 'success',
       title: 'Draft Saved',
       message: 'AI communication draft saved and logged for staff review.'
+    });
+  };
+
+  // Confirm administrative classification
+  const confirmEnquiryClassification = (id: string) => {
+    setEnquiries((prev) =>
+      prev.map((e) => {
+        if (e.id === id) {
+          const updatedAi = { ...e.aiClassification, isConfirmedByStaff: true };
+          return { ...e, aiClassification: updatedAi, isReviewed: true };
+        }
+        return e;
+      })
+    );
+    if (selectedEnquiry && selectedEnquiry.id === id) {
+      setSelectedEnquiry((prev) =>
+        prev
+          ? {
+              ...prev,
+              aiClassification: { ...prev.aiClassification, isConfirmedByStaff: true },
+              isReviewed: true,
+            }
+          : null
+      );
+    }
+    addToast({
+      type: 'success',
+      title: 'Classification Confirmed',
+      message: 'Staff confirmed procedure and specialty categorization.',
+    });
+  };
+
+  // Manually edit procedure and specialty
+  const updateEnquiryClassification = (
+    id: string,
+    updated: { procedure: string; specialty: DentalSpecialty; intent?: string }
+  ) => {
+    setEnquiries((prev) =>
+      prev.map((e) => {
+        if (e.id === id) {
+          const updatedAi = {
+            ...e.aiClassification,
+            procedure: updated.procedure,
+            specialty: updated.specialty,
+            serviceCategory: updated.specialty,
+            intent: updated.intent || e.aiClassification.intent,
+            isConfirmedByStaff: true,
+          };
+          return {
+            ...e,
+            procedure: updated.procedure,
+            specialty: updated.specialty,
+            service: updated.specialty,
+            aiClassification: updatedAi,
+            isReviewed: true,
+          };
+        }
+        return e;
+      })
+    );
+    if (selectedEnquiry && selectedEnquiry.id === id) {
+      setSelectedEnquiry((prev) =>
+        prev
+          ? {
+              ...prev,
+              procedure: updated.procedure,
+              specialty: updated.specialty,
+              service: updated.specialty,
+              aiClassification: {
+                ...prev.aiClassification,
+                procedure: updated.procedure,
+                specialty: updated.specialty,
+                serviceCategory: updated.specialty,
+                intent: updated.intent || prev.aiClassification.intent,
+                isConfirmedByStaff: true,
+              },
+              isReviewed: true,
+            }
+          : null
+      );
+    }
+    addToast({
+      type: 'success',
+      title: 'Classification Updated',
+      message: `Categorized as ${updated.specialty} (${updated.procedure}).`,
     });
   };
 
@@ -499,7 +596,7 @@ export const DentalFlowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setSettings(INITIAL_SETTINGS);
     setSelectedEnquiry(null);
     setSelectedPatient(null);
-    localStorage.clear();
+    localStorage.removeItem('dentalflow_enquiries_v2');
     addToast({
       type: 'info',
       title: 'Demo Data Reset',
@@ -524,6 +621,8 @@ export const DentalFlowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         markEnquiryReviewed,
         markEnquiryConverted,
         saveEnquiryDraft,
+        confirmEnquiryClassification,
+        updateEnquiryClassification,
         patients,
         selectedPatient,
         setSelectedPatient,

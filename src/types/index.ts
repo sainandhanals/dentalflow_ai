@@ -1,9 +1,17 @@
-export type ServiceType = 
-  | 'Orthodontics' 
-  | 'General Dentistry' 
-  | 'Cosmetic Dentistry' 
-  | 'Preventive Dentistry' 
-  | 'Pediatric Dentistry';
+export type DentalSpecialty = 
+  | 'General Dentistry'
+  | 'Orthodontics'
+  | 'Periodontics'
+  | 'Endodontics'
+  | 'Prosthodontics'
+  | 'Oral & Maxillofacial Surgery'
+  | 'Pediatric Dentistry'
+  | 'Cosmetic Dentistry'
+  | 'Implant Dentistry'
+  | 'Needs Staff Review';
+
+// Backward-compatible alias for existing references
+export type ServiceType = DentalSpecialty;
 
 export type EnquirySource = 'Website' | 'Email' | 'Phone' | 'Referral';
 
@@ -24,12 +32,24 @@ export interface Note {
   createdAt: string;
 }
 
-export interface AIClassification {
-  intent: string;
-  serviceCategory: string;
-  suggestedAction: string;
+export interface DetectedProcedureItem {
+  id: string;
+  procedure: string;
+  specialty: DentalSpecialty;
   confidence: number;
+}
+
+export interface AIClassification {
+  procedure: string; // Primary detected procedure
+  specialty: DentalSpecialty; // Primary dental specialty
+  detectedProcedures?: DetectedProcedureItem[]; // Multi-procedure breakdown
+  intent: string;
+  serviceCategory?: string;
+  confidence: number;
+  confidenceLevel: 'High' | 'Medium' | 'Low';
+  suggestedAction: string;
   priorityReasoning: string;
+  isConfirmedByStaff?: boolean;
 }
 
 export interface Enquiry {
@@ -39,7 +59,9 @@ export interface Enquiry {
   patientPhone: string;
   enquirySummary: string;
   fullMessage: string;
-  service: ServiceType;
+  service: DentalSpecialty;
+  procedure?: string;
+  specialty?: DentalSpecialty;
   source: EnquirySource;
   aiClassification: AIClassification;
   priority: PriorityLevel;

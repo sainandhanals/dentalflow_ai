@@ -9,8 +9,7 @@ import {
   ShieldAlert, 
   Send, 
   Save, 
-  FileText,
-  UserRound
+  FileText
 } from 'lucide-react';
 
 export const AIAssistantModal: React.FC = () => {
@@ -22,7 +21,7 @@ export const AIAssistantModal: React.FC = () => {
     addToast 
   } = useDentalFlow();
 
-  const { isOpen, enquiry, patient, objective: initialObj, tone: initialTone } = aiAssistantState;
+  const { isOpen, enquiry, patient, objective: initialObj, tone: initialTone, procedure: passedProc, specialty: passedSpec } = aiAssistantState;
 
   const [objective, setObjective] = useState('Consultation Booking Offer');
   const [tone, setTone] = useState<'Professional' | 'Friendly' | 'Concise'>('Friendly');
@@ -31,6 +30,10 @@ export const AIAssistantModal: React.FC = () => {
   const [generationStep, setGenerationStep] = useState('');
   const [draftMessage, setDraftMessage] = useState('');
   const [copied, setCopied] = useState(false);
+
+  // Derive procedure and specialty context
+  const detectedProcedure = passedProc || enquiry?.aiClassification?.procedure || enquiry?.procedure || 'Dental Care Consultation';
+  const detectedSpecialty = passedSpec || enquiry?.aiClassification?.specialty || enquiry?.service || 'General Dentistry';
 
   // Sync initial state when modal opens
   useEffect(() => {
@@ -48,42 +51,41 @@ export const AIAssistantModal: React.FC = () => {
   }, [isOpen, enquiry, patient]);
 
   const recipientName = enquiry?.patientName || patient?.name || 'Valued Patient';
-  const serviceContext = enquiry?.service || 'Dental Care';
 
   const generateDraft = (selectedTone = tone, selectedObjective = objective) => {
     setIsGenerating(true);
-    setGenerationStep('Analyzing enquiry intent and clinic context...');
+    setGenerationStep(`Analyzing intent for ${detectedProcedure} (${detectedSpecialty})...`);
 
     setTimeout(() => {
-      setGenerationStep('Applying BrightSmile communication guidelines...');
+      setGenerationStep('Applying BrightSmile approved communication guidelines...');
     }, 400);
 
     setTimeout(() => {
-      setGenerationStep('Formatting personalized message draft...');
+      setGenerationStep('Formatting procedure-specific message draft...');
     }, 700);
 
     setTimeout(() => {
       let draft = '';
       if (selectedObjective === 'Consultation Booking Offer') {
         if (selectedTone === 'Friendly') {
-          draft = `Hello ${recipientName}! Thank you so much for reaching out to BrightSmile Dental Studio about ${serviceContext}. We would love to welcome you in and help you explore your options. Would you like to come in for a relaxed 30-minute consultation this week? You can reply directly to this message or call our front desk at (555) 382-9011 to pick a time that suits your schedule best. Looking forward to meeting you!`;
+          draft = `Hello ${recipientName}! Thank you so much for reaching out to BrightSmile Dental Studio regarding your inquiry for ${detectedProcedure.toLowerCase()}. Our team specializing in ${detectedSpecialty} would love to welcome you in to discuss your goals. Would you like to schedule an introductory 30-minute consultation this week? You can reply directly to this message or call our front desk at (555) 382-9011 to pick a time that suits your schedule best. Looking forward to meeting you!`;
         } else if (selectedTone === 'Professional') {
-          draft = `Dear ${recipientName}, thank you for contacting BrightSmile Dental Studio regarding your ${serviceContext} enquiry. Our team is available to assist you with comprehensive treatment overview and preliminary scheduling. Please let us know your preferred days of the week, or contact our coordination team at (555) 382-9011 to arrange an initial consultation appointment.`;
+          draft = `Dear ${recipientName}, thank you for contacting BrightSmile Dental Studio regarding your ${detectedProcedure} consultation in ${detectedSpecialty}. Our clinical coordination team is available to assist you with a comprehensive preliminary assessment and appointment scheduling. Please let us know your preferred days of the week, or contact our coordination desk at (555) 382-9011 to arrange an appointment.`;
         } else {
-          draft = `Hi ${recipientName}, thanks for contacting BrightSmile Dental Studio about ${serviceContext}. We have consultation slots open this week. Would morning or afternoon suit you better? Reach us at (555) 382-9011 to confirm.`;
+          draft = `Hi ${recipientName}, thanks for contacting BrightSmile Dental Studio about ${detectedProcedure}. We have consultation slots open this week with our ${detectedSpecialty} team. Would morning or afternoon suit you better? Reach us at (555) 382-9011 to confirm.`;
         }
       } else if (selectedObjective === 'Pricing & Scope Response') {
         if (selectedTone === 'Friendly') {
-          draft = `Hi ${recipientName}, thank you for asking about our ${serviceContext} pricing! At BrightSmile, we believe in complete transparency. Our packages start with an initial diagnostic assessment so our clinical team can tailor the exact treatment plan to your smile. We also offer flexible interest-free monthly installment plans. Would you like us to reserve a quick 20-minute consultation so we can give you an exact quote?`;
+          draft = `Hi ${recipientName}, thank you for asking about our ${detectedProcedure.toLowerCase()} options and pricing! At BrightSmile, we believe in complete fee transparency. Because every patient's smile is unique, our ${detectedSpecialty} team begins with a quick diagnostic evaluation so we can provide an exact, itemized treatment plan. We also offer flexible interest-free monthly installment plans. Would you like us to reserve a 20-minute consultation to walk you through the options?`;
         } else if (selectedTone === 'Professional') {
-          draft = `Dear ${recipientName}, in response to your enquiry regarding ${serviceContext} fees at BrightSmile Dental Studio, our clinic provides itemized treatment estimates following an introductory clinical evaluation. We accept major PPO insurance plans and provide flexible financing options. Please contact our administrative desk to schedule your assessment.`;
+          draft = `Dear ${recipientName}, in response to your enquiry regarding ${detectedProcedure} fees at BrightSmile Dental Studio, our clinic provides itemized estimates following an introductory evaluation with our ${detectedSpecialty} specialists. We accept major PPO insurance plans and provide flexible financing options. Please contact our administrative desk at (555) 382-9011 to schedule your assessment.`;
         } else {
-          draft = `Hello ${recipientName}, our ${serviceContext} treatment pricing depends on the clinical assessment. We offer transparent pricing and 0% financing. Contact us at (555) 382-9011 to schedule your evaluation.`;
+          draft = `Hello ${recipientName}, our ${detectedProcedure} pricing depends on the initial examination. We offer transparent pricing and 0% financing through our ${detectedSpecialty} department. Contact us at (555) 382-9011 to schedule your evaluation.`;
         }
       } else if (selectedObjective === 'Urgent Assessment Triage') {
-        draft = `Hello ${recipientName}, we received your urgent note regarding discomfort. While clinical triage is handled in-person by our dental team, we have reserved a same-day evaluation buffer at BrightSmile Dental Studio today. Please call our front desk immediately at (555) 382-9011 so our receptionist can accommodate you directly. If you are experiencing severe swelling or difficulty breathing, please seek emergency medical care immediately.`;
+        draft = `Hello ${recipientName}, we received your urgent note regarding discomfort related to ${detectedProcedure.toLowerCase()}. While clinical triage is handled in-person by our dental team, we have reserved a same-day evaluation buffer at BrightSmile Dental Studio today. Please call our front desk immediately at (555) 382-9011 so our receptionist can accommodate you directly. If you are experiencing severe swelling or difficulty breathing, please seek emergency medical care immediately.`;
       } else {
-        draft = `Hello ${recipientName}, thank you for connecting with BrightSmile Dental Studio. We are checking our availability regarding your ${serviceContext} request. One of our patient care coordinators will follow up shortly to help finalize your booking. Please let us know if you have any questions in the meantime.`;
+        draft = `Hello ${recipientName}, thank you for connecting with BrightSmile Dental Studio regarding your ${detectedProcedure.toLowerCase()} request. One of our ${detectedSpecialty} patient coordinators will follow up shortly to help finalize your booking. Please let us know if you have any questions in the meantime.`;
       }
 
       setDraftMessage(draft);
@@ -133,22 +135,30 @@ export const AIAssistantModal: React.FC = () => {
       isOpen={isOpen}
       onClose={closeAIAssistant}
       title="AI Communication Assistant"
-      subtitle="Generate and review compliant, personalized patient messaging drafts"
+      subtitle="Generate compliant, personalized patient messaging drafts contextualized by procedure and specialty"
       maxWidth="2xl"
     >
       <div className="space-y-5">
-        {/* Context Strip */}
-        <div className="flex items-center justify-between p-3 rounded-xl bg-teal-50/60 border border-teal-100 text-xs text-teal-900">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold">
+        {/* Context Strip with Procedure and Specialty */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3.5 rounded-xl bg-teal-50/70 border border-teal-200/80 gap-2 text-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold shadow-xs flex-shrink-0">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <span className="font-semibold text-teal-950">{recipientName}</span>
-              <span className="text-teal-700 ml-1.5">• {serviceContext}</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-bold text-teal-950 text-sm">{recipientName}</span>
+                <span className="text-teal-700">•</span>
+                <span className="font-semibold text-teal-800 bg-white px-2 py-0.5 rounded border border-teal-200">
+                  {detectedSpecialty}
+                </span>
+              </div>
+              <p className="text-[11px] text-teal-700 mt-0.5 font-medium">
+                Detected Procedure: <strong className="text-teal-950">{detectedProcedure}</strong>
+              </p>
             </div>
           </div>
-          <span className="bg-white/80 px-2.5 py-1 rounded-md text-[11px] font-medium text-teal-800 border border-teal-200/60">
+          <span className="bg-white/90 px-2.5 py-1 rounded-md text-[11px] font-medium text-teal-800 border border-teal-200/70 self-start sm:self-auto">
             {enquiry?.source ? `Via ${enquiry.source}` : 'Active Patient'}
           </span>
         </div>
@@ -209,8 +219,8 @@ export const AIAssistantModal: React.FC = () => {
               className="w-full text-xs py-2 px-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500"
             >
               <option value="BrightSmile Approved Standard">BrightSmile Standard</option>
-              <option value="Orthodontic Specialization Protocol">Ortho Protocol</option>
-              <option value="Weekend Urgent Triage Template">Urgent Care Policy</option>
+              <option value="Specialty Specific Protocol">Specialty Clinical Protocol</option>
+              <option value="Weekend Urgent Care Policy">Urgent Care Policy</option>
             </select>
           </div>
         </div>

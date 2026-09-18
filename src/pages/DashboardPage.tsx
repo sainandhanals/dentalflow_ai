@@ -38,6 +38,7 @@ export const DashboardPage: React.FC = () => {
     updateFollowUpStatus, 
     setIsNewEnquiryModalOpen,
     setActivePage,
+    navigateToEnquiriesWithSpecialty,
     addToast 
   } = useDentalFlow();
 
@@ -386,8 +387,8 @@ export const DashboardPage: React.FC = () => {
             return (
               <div
                 key={item.specialty}
-                onClick={() => setActivePage('enquiries')}
-                className={`p-3.5 rounded-xl border transition-all cursor-pointer group ${
+                onClick={() => navigateToEnquiriesWithSpecialty(item.specialty)}
+                className={`p-3.5 rounded-xl border transition-all cursor-pointer group hover:scale-[1.02] ${
                   item.specialty === 'Needs Staff Review'
                     ? 'bg-amber-50/50 border-amber-200 hover:border-amber-300'
                     : 'bg-slate-50/60 border-slate-200/80 hover:border-teal-300 hover:bg-teal-50/30'

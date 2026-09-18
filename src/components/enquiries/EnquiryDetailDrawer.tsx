@@ -16,7 +16,8 @@ import {
   Check,
   Layers,
   HelpCircle,
-  AlertCircle
+  AlertCircle,
+  CheckSquare
 } from 'lucide-react';
 import { EnquiryStatus, DentalSpecialty } from '../../types';
 import { SPECIALTY_TAXONOMY, INTENT_CATEGORIES } from '../../data/specialtyTaxonomy';
@@ -32,6 +33,7 @@ export const EnquiryDetailDrawer: React.FC = () => {
     markEnquiryConverted,
     confirmEnquiryClassification,
     updateEnquiryClassification,
+    createFollowUpForEnquiry,
     openAIAssistant 
   } = useDentalFlow();
 
@@ -156,6 +158,15 @@ export const EnquiryDetailDrawer: React.FC = () => {
                 Mark Reviewed
               </button>
             )}
+
+            <button
+              onClick={() => createFollowUpForEnquiry(selectedEnquiry)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-medium border border-slate-200 transition-colors"
+              title="Schedule a follow-up task for staff"
+            >
+              <CheckSquare className="w-3.5 h-3.5 text-teal-600" />
+              Follow-up
+            </button>
 
             {selectedEnquiry.status !== 'Converted' ? (
               <button
@@ -459,18 +470,27 @@ export const EnquiryDetailDrawer: React.FC = () => {
 
           {/* Saved AI Draft Preview if any */}
           {selectedEnquiry.lastDraft && (
-            <div className="p-3.5 rounded-xl bg-teal-50/50 border border-teal-200/70 text-xs space-y-1.5">
+            <div className="p-3.5 rounded-xl bg-teal-50/50 border border-teal-200/70 text-xs space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-teal-900 flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5 text-teal-600" />
                   Saved Draft (Awaiting Dispatch)
                 </span>
-                <button
-                  onClick={handleOpenAI}
-                  className="text-teal-700 hover:text-teal-900 text-[11px] font-semibold underline"
-                >
-                  Edit in Assistant
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => createFollowUpForEnquiry(selectedEnquiry, `Review & send draft: ${selectedEnquiry.aiClassification.procedure}`)}
+                    className="text-teal-700 hover:text-teal-900 text-[11px] font-semibold underline"
+                  >
+                    Schedule Task
+                  </button>
+                  <span className="text-slate-300">•</span>
+                  <button
+                    onClick={handleOpenAI}
+                    className="text-teal-700 hover:text-teal-900 text-[11px] font-semibold underline"
+                  >
+                    Edit in Assistant
+                  </button>
+                </div>
               </div>
               <p className="text-slate-700 bg-white p-2.5 rounded-lg border border-teal-100 italic leading-relaxed">
                 "{selectedEnquiry.lastDraft}"

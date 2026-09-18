@@ -18,6 +18,7 @@ export const AIAssistantModal: React.FC = () => {
     closeAIAssistant, 
     saveEnquiryDraft, 
     markEnquiryReviewed,
+    createFollowUpForEnquiry,
     addToast 
   } = useDentalFlow();
 
@@ -121,12 +122,17 @@ export const AIAssistantModal: React.FC = () => {
     if (enquiry) {
       saveEnquiryDraft(enquiry.id, draftMessage);
       markEnquiryReviewed(enquiry.id);
+      createFollowUpForEnquiry(
+        { ...enquiry, lastDraft: draftMessage },
+        `Review communication draft: ${detectedProcedure}`
+      );
+    } else {
+      addToast({
+        type: 'success',
+        title: 'Queued for Staff Review',
+        message: 'Draft attached to patient record and assigned to receptionist queue.'
+      });
     }
-    addToast({
-      type: 'success',
-      title: 'Queued for Staff Review',
-      message: 'Draft attached to enquiry and assigned to receptionist queue.'
-    });
     closeAIAssistant();
   };
 

@@ -49,6 +49,10 @@ interface DentalFlowContextType {
   enquiries: Enquiry[];
   selectedEnquiry: Enquiry | null;
   setSelectedEnquiry: (enquiry: Enquiry | null) => void;
+  selectedSpecialtyFilter: string;
+  setSelectedSpecialtyFilter: (specialty: string) => void;
+  navigateToEnquiriesWithSpecialty: (specialty: string) => void;
+  createFollowUpForEnquiry: (enquiry: Enquiry, customTitle?: string) => void;
   addEnquiry: (enquiry: Partial<Enquiry>) => void;
   updateEnquiryStatus: (id: string, status: EnquiryStatus) => void;
   assignEnquiryStaff: (id: string, staff: string) => void;
@@ -140,6 +144,7 @@ export const DentalFlowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const [selectedEnquiry, setSelectedEnquiry] = useState<Enquiry | null>(null);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [selectedSpecialtyFilter, setSelectedSpecialtyFilter] = useState<string>('All');
 
   // Modals state
   const [isNewEnquiryModalOpen, setIsNewEnquiryModalOpen] = useState(false);
@@ -301,7 +306,42 @@ export const DentalFlowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     });
   };
 
+  const navigateToEnquiriesWithSpecialty = (specialty: string) => {
+    setSelectedSpecialtyFilter(specialty);
+    setActivePage('enquiries');
+  };
+
+  const createFollowUpForEnquiry = (enquiry: Enquiry, customTitle?: string) => {
+    const procedure = enquiry.aiClassification?.procedure || enquiry.procedure || 'Consultation';
+    const specialty = enquiry.aiClassification?.specialty || enquiry.specialty || 'General Dentistry';
+    const title = customTitle || `Follow-up: ${procedure} (${specialty})`;
+    const newId = `TSK-${String(followUps.length + 1).padStart(3, '0')}`;
+    const newTask: FollowUpTask = {
+      id: newId,
+      title,
+      patientName: enquiry.patientName,
+      enquiryId: enquiry.id,
+      taskType: enquiry.priority === 'Urgent Review' ? 'Pending enquiry response' : 'Unbooked lead follow-up',
+      dueDate: enquiry.priority === 'Urgent Review' ? 'Today (2h emergency buffer)' : 'Tomorrow by 10:00 AM',
+      priority: enquiry.priority,
+      assignedStaff: enquiry.assignedStaff,
+      status: 'due_today',
+      notes: `Generated from enquiry ${enquiry.id}. Target service: "${procedure}" under ${specialty}. ${enquiry.lastDraft ? 'AI communication draft attached.' : ''}`,
+    };
+    setFollowUps((prev) => [newTask, ...prev]);
+    if (enquiry.status === 'New') {
+      updateEnquiryStatus(enquiry.id, 'Pending Review');
+    }
+    addToast({
+      type: 'success',
+      title: 'Follow-up Task Scheduled',
+      message: `Task queued for ${enquiry.assignedStaff} regarding ${procedure}.`
+    });
+  };
+
   const markEnquiryConverted = (id: string) => {
+    const targetEnquiry = enquiries.find(e => e.id === id) || (selectedEnquiry?.id === id ? selectedEnquiry : null);
+
     setEnquiries((prev) =>
       prev.map((e) => (e.id === id ? { ...e, status: 'Converted', isReviewed: true } : e))
     );
@@ -309,6 +349,48 @@ export const DentalFlowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setSelectedEnquiry((prev) =>
         prev ? { ...prev, status: 'Converted', isReviewed: true } : null
       );
+    }
+
+    if (targetEnquiry) {
+      const existingPatient = patients.find(
+        p => p.name.toLowerCase() === targetEnquiry.patientName.toLowerCase() || 
+             p.email.toLowerCase() === targetEnquiry.patientEmail.toLowerCase()
+      );
+      if (!existingPatient) {
+        const newPatientId = `PAT-${100 + patients.length + 1}`;
+        const newPatient: Patient = {
+          id: newPatientId,
+          name: targetEnquiry.patientName,
+          email: targetEnquiry.patientEmail,
+          phone: targetEnquiry.patientPhone,
+          lastAppointment: 'Introductory Consultation (Booked)',
+          nextAppointment: 'Upcoming in 3 days',
+          engagementScore: 92,
+          engagementLevel: 'Active',
+          preferredChannel: targetEnquiry.source === 'Phone' ? 'Phone' : 'Email',
+          lastInteraction: 'Just now (Converted from Enquiry)',
+          assignedStaff: targetEnquiry.assignedStaff,
+          interactions: [
+            {
+              id: `int-${Date.now()}`,
+              date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+              type: targetEnquiry.source === 'Website' ? 'Online Enquiry' : (targetEnquiry.source as any),
+              title: `Converted lead for ${targetEnquiry.aiClassification?.procedure || targetEnquiry.procedure || 'Consultation'}`,
+              note: `Patient converted from enquiry ${targetEnquiry.id} (${targetEnquiry.aiClassification?.specialty || targetEnquiry.specialty}). Introductory appointment booked.`,
+              staff: targetEnquiry.assignedStaff
+            }
+          ],
+          notes: [
+            {
+              id: `pn-${Date.now()}`,
+              author: 'System',
+              text: `Converted from enquiry ${targetEnquiry.id}. Target procedure: ${targetEnquiry.aiClassification?.procedure || targetEnquiry.procedure}.`,
+              createdAt: 'Just now'
+            }
+          ]
+        };
+        setPatients(prev => [newPatient, ...prev]);
+      }
     }
 
     try {
@@ -324,7 +406,7 @@ export const DentalFlowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     addToast({
       type: 'success',
       title: 'Lead Converted! 🎉',
-      message: 'Enquiry has been marked as a successfully booked patient.'
+      message: 'Enquiry converted & patient profile linked in practice directory.'
     });
   };
 
@@ -614,6 +696,10 @@ export const DentalFlowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         enquiries,
         selectedEnquiry,
         setSelectedEnquiry,
+        selectedSpecialtyFilter,
+        setSelectedSpecialtyFilter,
+        navigateToEnquiriesWithSpecialty,
+        createFollowUpForEnquiry,
         addEnquiry,
         updateEnquiryStatus,
         assignEnquiryStaff,

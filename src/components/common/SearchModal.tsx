@@ -19,11 +19,19 @@ export const SearchModal: React.FC = () => {
   const [query, setQuery] = useState('');
 
   const filteredEnquiries = query.trim() === '' ? [] : enquiries.filter(
-    (e) =>
-      e.patientName.toLowerCase().includes(query.toLowerCase()) ||
-      e.enquirySummary.toLowerCase().includes(query.toLowerCase()) ||
-      e.service.toLowerCase().includes(query.toLowerCase())
-  ).slice(0, 4);
+    (e) => {
+      const q = query.toLowerCase();
+      const procedure = (e.aiClassification?.procedure || e.procedure || '').toLowerCase();
+      const specialty = (e.aiClassification?.specialty || e.specialty || e.service || '').toLowerCase();
+      return (
+        e.patientName.toLowerCase().includes(q) ||
+        e.enquirySummary.toLowerCase().includes(q) ||
+        e.fullMessage.toLowerCase().includes(q) ||
+        procedure.includes(q) ||
+        specialty.includes(q)
+      );
+    }
+  ).slice(0, 5);
 
   const filteredPatients = query.trim() === '' ? [] : patients.filter(
     (p) =>
@@ -103,10 +111,15 @@ export const SearchModal: React.FC = () => {
                       className="group flex items-center justify-between p-2.5 rounded-xl border border-slate-100 hover:border-teal-200 hover:bg-teal-50/40 cursor-pointer transition-all"
                     >
                       <div className="min-w-0 flex-1 pr-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-semibold text-xs text-slate-900">{e.patientName}</span>
+                          <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">
+                            {e.aiClassification?.procedure || e.procedure || e.service}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            ({e.aiClassification?.specialty || e.specialty || e.service})
+                          </span>
                           <Badge variant="status" size="sm">{e.status}</Badge>
-                          <Badge variant="service" size="sm">{e.service}</Badge>
                         </div>
                         <p className="text-xs text-slate-500 truncate mt-0.5">{e.enquirySummary}</p>
                       </div>

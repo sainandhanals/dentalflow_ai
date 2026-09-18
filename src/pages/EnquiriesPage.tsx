@@ -21,11 +21,19 @@ export const EnquiriesPage: React.FC = () => {
     enquiries, 
     setSelectedEnquiry, 
     setIsNewEnquiryModalOpen,
-    openAIAssistant 
+    openAIAssistant,
+    selectedSpecialtyFilter,
+    setSelectedSpecialtyFilter
   } = useDentalFlow();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSpecialty, setSelectedSpecialty] = useState<string>('All');
+  const [selectedSpecialty, setSelectedSpecialty] = useState<string>(selectedSpecialtyFilter || 'All');
+
+  React.useEffect(() => {
+    if (selectedSpecialtyFilter) {
+      setSelectedSpecialty(selectedSpecialtyFilter);
+    }
+  }, [selectedSpecialtyFilter]);
   const [selectedIntent, setSelectedIntent] = useState<string>('All');
   const [selectedSource, setSelectedSource] = useState<string>('All');
   const [selectedPriority, setSelectedPriority] = useState<string>('All');
@@ -64,6 +72,7 @@ export const EnquiriesPage: React.FC = () => {
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedSpecialty('All');
+    setSelectedSpecialtyFilter('All');
     setSelectedIntent('All');
     setSelectedSource('All');
     setSelectedPriority('All');
@@ -225,7 +234,10 @@ export const EnquiriesPage: React.FC = () => {
           {/* Specialty filter */}
           <select
             value={selectedSpecialty}
-            onChange={(e) => setSelectedSpecialty(e.target.value)}
+            onChange={(e) => {
+              setSelectedSpecialty(e.target.value);
+              setSelectedSpecialtyFilter(e.target.value);
+            }}
             className="text-xs py-1.5 px-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500 font-medium"
           >
             <option value="All">All Specialties</option>
@@ -346,7 +358,9 @@ export const EnquiriesPage: React.FC = () => {
                             {procedureName}
                           </span>
                           {isConfirmed && (
-                            <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" title="Confirmed by staff" />
+                            <span title="Confirmed by staff" className="inline-flex items-center">
+                              <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                            </span>
                           )}
                         </div>
                         {enquiry.aiClassification.detectedProcedures && enquiry.aiClassification.detectedProcedures.length > 1 && (

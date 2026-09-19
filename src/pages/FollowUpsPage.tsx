@@ -18,6 +18,7 @@ import { FollowUpStatus, FollowUpTaskType } from '../types';
 
 export const FollowUpsPage: React.FC = () => {
   const { 
+    enquiries,
     followUps, 
     updateFollowUpStatus, 
     snoozeFollowUp, 
@@ -210,10 +211,22 @@ export const FollowUpsPage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredTasks.length > 0 ? (
-                filteredTasks.map((task) => (
+                filteredTasks.map((task) => {
+                  const relatedEnquiry = task.enquiryId ? enquiries.find(e => e.id === task.enquiryId) : null;
+                  return (
                   <tr key={task.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-3.5 px-4 font-semibold text-slate-900 max-w-xs">
                       {task.title}
+                      {relatedEnquiry && (
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">
+                            {relatedEnquiry.aiClassification?.procedure || relatedEnquiry.procedure}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            ({relatedEnquiry.aiClassification?.specialty || relatedEnquiry.specialty})
+                          </span>
+                        </div>
+                      )}
                       {task.notes && (
                         <p className="text-[11px] font-normal text-slate-400 truncate mt-0.5">
                           {task.notes}
@@ -264,7 +277,18 @@ export const FollowUpsPage: React.FC = () => {
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => openAIAssistant({ patient: { name: task.patientName } as any, objective: 'Consultation Booking Offer' })}
+                          onClick={() => {
+                            if (relatedEnquiry) {
+                              openAIAssistant({
+                                enquiry: relatedEnquiry,
+                                procedure: relatedEnquiry.aiClassification?.procedure || relatedEnquiry.procedure,
+                                specialty: relatedEnquiry.aiClassification?.specialty || relatedEnquiry.specialty,
+                                objective: 'Consultation Booking Offer'
+                              });
+                            } else {
+                              openAIAssistant({ patient: { name: task.patientName } as any, objective: 'Consultation Booking Offer' });
+                            }
+                          }}
                           className="p-1.5 text-teal-600 hover:text-teal-800 hover:bg-teal-50 rounded-lg transition-colors"
                           title="Generate message draft"
                         >
@@ -298,7 +322,8 @@ export const FollowUpsPage: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={8} className="py-10 text-center text-slate-400">

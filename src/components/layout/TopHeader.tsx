@@ -25,7 +25,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileMenu }) => {
     setIsSearchModalOpen, 
     resetDemoData, 
     settings,
-    enquiries 
+    enquiries,
+    isBackendLive,
+    isSyncing,
+    checkBackendConnection 
   } = useDentalFlow();
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -47,6 +50,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileMenu }) => {
         return { title: 'Analytics', subtitle: 'Understand enquiry trends, follow-up activity, and conversion performance' };
       case 'settings':
         return { title: 'Practice Settings', subtitle: 'Configure clinic profile, AI safeguards, and communication rules' };
+      case 'ai-operations':
+        return { title: 'AI Operations Engine', subtitle: 'Predictive chair defense, multi-member family scheduling & empathetic outreach' };
+      default:
+        return { title: 'Dashboard', subtitle: 'Real-time overview of patient enquiries, follow-ups, and engagement' };
     }
   };
 
@@ -69,10 +76,26 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileMenu }) => {
             <h1 className="text-lg font-bold text-slate-900 tracking-tight">
               {meta.title}
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Demo Mode
-            </span>
+            <button
+              onClick={() => checkBackendConnection()}
+              className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold transition-all border ${
+                isBackendLive
+                  ? 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100 shadow-sm'
+                  : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+              }`}
+              title={
+                isBackendLive
+                  ? 'Express backend connected on port 5000 with SQLite database. Click to re-sync.'
+                  : 'Backend offline or unreachable. Operating in local demo mode. Click to check server.'
+              }
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isBackendLive ? 'bg-teal-500 animate-pulse' : 'bg-amber-500'
+                } ${isSyncing ? 'animate-spin' : ''}`}
+              />
+              {isSyncing ? 'Syncing...' : isBackendLive ? 'Backend Live (:5000)' : 'Local Demo Mode'}
+            </button>
           </div>
           <p className="hidden md:block text-xs text-slate-500 mt-0.5">
             {meta.subtitle}

@@ -10,13 +10,16 @@ import {
   Calendar, 
   Sparkles, 
   CheckCircle2, 
-  Eye, 
   ChevronRight, 
   ShieldAlert, 
-  AlertCircle, 
+  Plus,
+  Layers,
+  ArrowRight,
+  Zap,
+  AlertTriangle,
+  Users,
   FileText,
-  UserCheck,
-  Plus
+  Star
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -28,18 +31,27 @@ import {
   ResponsiveContainer, 
   Legend 
 } from 'recharts';
+import { SPECIALTY_TAXONOMY } from '../data/specialtyTaxonomy';
 
 export const DashboardPage: React.FC = () => {
   const { 
     enquiries, 
     followUps, 
-    patients, 
+    appointments,
+    waitlist,
+    households,
+    treatmentPlans,
+    reviews,
+    overviewMetrics,
+    isBackendLive,
     dateRange, 
     setDateRange, 
     setSelectedEnquiry, 
     updateFollowUpStatus, 
     setIsNewEnquiryModalOpen,
     setActivePage,
+    navigateToEnquiriesWithSpecialty,
+    navigateToAIOperation,
     addToast 
   } = useDentalFlow();
 
@@ -55,6 +67,31 @@ export const DashboardPage: React.FC = () => {
     { day: 'Sat', newEnquiries: 4, followedUp: 4, booked: 3 },
     { day: 'Sun (Today)', newEnquiries: 5, followedUp: 4, booked: 3 },
   ];
+
+  // Dynamic specialty breakdown calculation from enquiries
+  const specialtyCounts = SPECIALTY_TAXONOMY.map(tax => {
+    const count = enquiries.filter(e => {
+      const s = e.aiClassification.specialty || e.specialty || e.service;
+      return s === tax.specialty;
+    }).length;
+    return {
+      specialty: tax.specialty,
+      count,
+    };
+  }).filter(item => item.count > 0).sort((a, b) => b.count - a.count);
+
+  // Include "Needs Staff Review" if any
+  const needsReviewCount = enquiries.filter(e => {
+    const s = e.aiClassification.specialty || e.specialty || e.service;
+    return s === 'Needs Staff Review';
+  }).length;
+
+  if (needsReviewCount > 0) {
+    specialtyCounts.push({
+      specialty: 'Needs Staff Review',
+      count: needsReviewCount,
+    });
+  }
 
   // Priority enquiries (top urgent or high)
   const priorityEnquiries = enquiries
@@ -73,6 +110,12 @@ export const DashboardPage: React.FC = () => {
     });
   };
 
+  // Dynamic top operational items from live state
+  const highestRiskAppt = appointments.find(a => a.riskLevel === 'High' || a.riskLevel === 'High Risk' || a.riskLevel === 'high') || appointments[0];
+  const topWaitlist = waitlist[0];
+  const topHousehold = households[0];
+  const topTreatmentPlan = treatmentPlans[0];
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header Banner */}
@@ -89,6 +132,12 @@ export const DashboardPage: React.FC = () => {
             <span>Friday, September 18, 2026</span>
             <span>•</span>
             <span className="text-slate-700 font-medium">BrightSmile Dental Studio</span>
+            {isBackendLive && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Live DB Connected
+              </span>
+            )}
           </p>
         </div>
 
@@ -133,12 +182,12 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">48</span>
+            <span className="text-2xl font-bold text-slate-900">{overviewMetrics?.totalEnquiries ?? enquiries.length}</span>
             <span className="inline-flex items-center text-xs font-semibold text-emerald-600">
               <ArrowUpRight className="w-3.5 h-3.5" /> +12.5%
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">vs. previous period</p>
+          <p className="text-[11px] text-slate-400 mt-1">Classified across {specialtyCounts.length} dental specialties</p>
         </div>
 
         {/* Card 2: Pending Follow-ups */}
@@ -152,12 +201,16 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">16</span>
+            <span className="text-2xl font-bold text-slate-900">
+              {overviewMetrics?.pendingFollowUps ?? followUps.filter(f => f.status !== 'completed').length}
+            </span>
             <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
               Requires attention
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">3 overdue tasks</p>
+          <p className="text-[11px] text-slate-400 mt-1">
+            {followUps.filter(f => f.priority === 'Urgent Review' && f.status !== 'completed').length || 2} urgent triage tasks
+          </p>
         </div>
 
         {/* Card 3: Unbooked Leads */}
@@ -171,7 +224,9 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">12</span>
+            <span className="text-2xl font-bold text-slate-900">
+              {overviewMetrics?.unbookedLeads ?? enquiries.filter(e => e.status !== 'Converted' && e.status !== 'Closed').length}
+            </span>
             <span className="text-xs text-indigo-700 font-medium">
               High intent
             </span>
@@ -190,12 +245,144 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">68.4%</span>
+            <span className="text-2xl font-bold text-slate-900">
+              {overviewMetrics?.conversionRate !== undefined ? `${overviewMetrics.conversionRate}%` : '68.4%'}
+            </span>
             <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
               +4.1%
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Demo period benchmark</p>
+          <p className="text-[11px] text-slate-400 mt-1">Live practice conversion metric</p>
+        </div>
+      </div>
+
+      {/* DentalFlow AI Operations Command Center Banner & Quick Cards */}
+      <div className="bg-gradient-to-br from-slate-900 via-navy-950 to-slate-900 rounded-2xl p-5 border border-slate-800 shadow-subtle text-white">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-4 border-b border-slate-800">
+          <div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-teal-400" />
+              <h3 className="text-sm font-bold text-white tracking-tight uppercase">
+                DentalFlow AI Operations Command Center
+              </h3>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                Live Automation
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Automated chair loss defense, family multi-chair grouping, empathetic treatment journeys & review moderation.
+            </p>
+          </div>
+
+          <button
+            onClick={() => navigateToAIOperation('no-show')}
+            className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-semibold shadow transition-colors flex items-center gap-1.5 self-start sm:self-auto shrink-0"
+          >
+            <span>Open AI Operations Studio</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {/* Card 1: No-Show Risk */}
+          <div 
+            onClick={() => navigateToAIOperation('no-show')}
+            className="bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 hover:border-rose-500/50 rounded-xl p-3.5 cursor-pointer transition-all group"
+          >
+            <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+              <span className="font-semibold text-rose-300 flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-400" /> No-Show Risk Guard
+              </span>
+              <span className="text-[10px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded font-bold">
+                {highestRiskAppt ? `${Math.round(highestRiskAppt.noShowProbability > 1 ? highestRiskAppt.noShowProbability : highestRiskAppt.noShowProbability * 100)}% Risk` : '78% Risk'}
+              </span>
+            </div>
+            <div className="font-bold text-white text-sm group-hover:text-rose-200 transition-colors">
+              {highestRiskAppt ? `${highestRiskAppt.patientName} (${highestRiskAppt.time})` : 'Sarah Thomas (02:00 PM)'}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-0.5 truncate">
+              {highestRiskAppt ? `${highestRiskAppt.procedure} • ${highestRiskAppt.riskFactors?.[0] || 'High Risk'}` : 'Root Canal • Unconfirmed SMS'}
+            </div>
+            <div className="mt-2.5 pt-2 border-t border-slate-700/50 flex items-center justify-between text-[11px] text-teal-400 font-semibold">
+              <span>View Diagnostics</span>
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </div>
+
+          {/* Card 2: Auto-Waitlist Fill */}
+          <div 
+            onClick={() => navigateToAIOperation('waitlist')}
+            className="bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 hover:border-teal-500/50 rounded-xl p-3.5 cursor-pointer transition-all group"
+          >
+            <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+              <span className="font-semibold text-teal-300 flex items-center gap-1">
+                <Zap className="w-3.5 h-3.5 text-teal-400" /> Waitlist Standby
+              </span>
+              <span className="text-[10px] bg-teal-500/20 text-teal-300 px-1.5 py-0.5 rounded font-bold">
+                {topWaitlist ? `${topWaitlist.matchScore ?? Math.round(topWaitlist.acceptanceProbability > 1 ? topWaitlist.acceptanceProbability : topWaitlist.acceptanceProbability * 100)}% Match` : '94% Match'}
+              </span>
+            </div>
+            <div className="font-bold text-white text-sm group-hover:text-teal-200 transition-colors">
+              {topWaitlist ? `${topWaitlist.patientName} (${topWaitlist.procedure})` : 'Emily Johnson (Crown Prep)'}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-0.5 truncate">
+              {topWaitlist ? `${topWaitlist.urgency} Urgency • ${topWaitlist.availability || 'Ready soon'}` : 'Ready in 15m • High Urgency'}
+            </div>
+            <div className="mt-2.5 pt-2 border-t border-slate-700/50 flex items-center justify-between text-[11px] text-teal-400 font-semibold">
+              <span>Dispatch Waitlist</span>
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </div>
+
+          {/* Card 3: Household Bundling */}
+          <div 
+            onClick={() => navigateToAIOperation('households')}
+            className="bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 hover:border-indigo-500/50 rounded-xl p-3.5 cursor-pointer transition-all group"
+          >
+            <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+              <span className="font-semibold text-indigo-300 flex items-center gap-1">
+                <Users className="w-3.5 h-3.5 text-indigo-400" /> Family Bundling
+              </span>
+              <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-bold">
+                {topHousehold ? `${topHousehold.members?.length || 4} Members` : '4 Members'}
+              </span>
+            </div>
+            <div className="font-bold text-white text-sm group-hover:text-indigo-200 transition-colors">
+              {topHousehold ? `${topHousehold.householdName || topHousehold.familyName || 'Kumar Family'} Itinerary` : 'Kumar Family Itinerary'}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-0.5 truncate">
+              {topHousehold ? `${topHousehold.schedulingEfficiency || 'Saves 3 trips'} • ${topHousehold.suggestedDate || 'Saturday Morning'}` : 'Saves 3 trips • Saturday Morning'}
+            </div>
+            <div className="mt-2.5 pt-2 border-t border-slate-700/50 flex items-center justify-between text-[11px] text-indigo-400 font-semibold">
+              <span>Review Family Grid</span>
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </div>
+
+          {/* Card 4: Treatment Plans & Reviews */}
+          <div 
+            onClick={() => navigateToAIOperation('treatment-plans')}
+            className="bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 hover:border-purple-500/50 rounded-xl p-3.5 cursor-pointer transition-all group"
+          >
+            <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+              <span className="font-semibold text-purple-300 flex items-center gap-1">
+                <FileText className="w-3.5 h-3.5 text-purple-400" /> Treatment Nudges
+              </span>
+              <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded font-bold">
+                {topTreatmentPlan ? `₹${(topTreatmentPlan.estimatedCost || topTreatmentPlan.value || 28000).toLocaleString('en-IN')}` : '₹28,000 Plan'}
+              </span>
+            </div>
+            <div className="font-bold text-white text-sm group-hover:text-purple-200 transition-colors">
+              {topTreatmentPlan ? `${topTreatmentPlan.patientName} (${topTreatmentPlan.procedure})` : 'Rahul Menon (Root Canal)'}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-0.5 truncate">
+              {topTreatmentPlan ? `${topTreatmentPlan.objectionCategory} • ${(topTreatmentPlan.nudgeSequence?.length || 3)}-Step Journey` : 'Cost Concern • 4-Step EMI Flow'}
+            </div>
+            <div className="mt-2.5 pt-2 border-t border-slate-700/50 flex items-center justify-between text-[11px] text-purple-400 font-semibold">
+              <span>Launch Nudges</span>
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -307,6 +494,14 @@ export const DashboardPage: React.FC = () => {
                     </span>
                     <Badge variant="priority">{enquiry.priority}</Badge>
                   </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200/80">
+                      {enquiry.aiClassification.procedure || enquiry.procedure}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      ({enquiry.aiClassification.specialty || enquiry.specialty})
+                    </span>
+                  </div>
                   <p className="text-xs text-slate-600 line-clamp-1">
                     "{enquiry.enquirySummary}"
                   </p>
@@ -323,6 +518,75 @@ export const DashboardPage: React.FC = () => {
               ))}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* FEATURE SECTION: Enquiries by Dental Specialty */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-subtle">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-teal-600" />
+              <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                Enquiries by Dental Specialty
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Live breakdown of patient demand across configurable clinical specialties
+            </p>
+          </div>
+          <button
+            onClick={() => setActivePage('enquiries')}
+            className="text-xs text-teal-600 hover:text-teal-800 font-semibold inline-flex items-center gap-1 self-start sm:self-auto"
+          >
+            <span>Explore All in Enquiries Table</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {specialtyCounts.map((item) => {
+            const pct = Math.round((item.count / enquiries.length) * 100);
+            return (
+              <div
+                key={item.specialty}
+                onClick={() => navigateToEnquiriesWithSpecialty(item.specialty)}
+                className={`p-3.5 rounded-xl border transition-all cursor-pointer group hover:scale-[1.02] ${
+                  item.specialty === 'Needs Staff Review'
+                    ? 'bg-amber-50/50 border-amber-200 hover:border-amber-300'
+                    : 'bg-slate-50/60 border-slate-200/80 hover:border-teal-300 hover:bg-teal-50/30'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className={`text-xs font-bold truncate ${
+                    item.specialty === 'Needs Staff Review' ? 'text-amber-900' : 'text-slate-900 group-hover:text-teal-900'
+                  }`}>
+                    {item.specialty}
+                  </span>
+                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${
+                    item.specialty === 'Needs Staff Review'
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-teal-100 text-teal-800'
+                  }`}>
+                    {item.count}
+                  </span>
+                </div>
+
+                <div className="w-full bg-slate-200/70 h-1.5 rounded-full overflow-hidden mb-1">
+                  <div 
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      item.specialty === 'Needs Staff Review' ? 'bg-amber-500' : 'bg-teal-600'
+                    }`}
+                    style={{ width: `${Math.max(10, pct)}%` }}
+                  />
+                </div>
+
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {pct}% of active volume
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 

@@ -8,6 +8,7 @@ import { FollowUpsPage } from './pages/FollowUpsPage';
 import { WorkflowsPage } from './pages/WorkflowsPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { AIOperationsPage } from './pages/AIOperationsPage';
 
 const AppContent: React.FC = () => {
   const { activePage } = useDentalFlow();
@@ -16,6 +17,8 @@ const AppContent: React.FC = () => {
     switch (activePage) {
       case 'dashboard':
         return <DashboardPage />;
+      case 'ai-operations':
+        return <AIOperationsPage />;
       case 'enquiries':
         return <EnquiriesPage />;
       case 'patients':

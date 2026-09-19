@@ -5,28 +5,36 @@ import { EnquiryDetailDrawer } from '../components/enquiries/EnquiryDetailDrawer
 import { NewEnquiryModal } from '../components/enquiries/NewEnquiryModal';
 import { 
   Search, 
-  Filter, 
   RotateCcw, 
   Plus, 
   Sparkles, 
   Eye, 
-  MessageSquare, 
   CheckCircle2,
-  ChevronRight,
-  ArrowUpDown
+  Check,
+  Filter
 } from 'lucide-react';
-import { Enquiry, ServiceType, EnquirySource, PriorityLevel, EnquiryStatus } from '../types';
+import { DentalSpecialty } from '../types';
+import { SPECIALTY_TAXONOMY, INTENT_CATEGORIES } from '../data/specialtyTaxonomy';
 
 export const EnquiriesPage: React.FC = () => {
   const { 
     enquiries, 
     setSelectedEnquiry, 
     setIsNewEnquiryModalOpen,
-    openAIAssistant 
+    openAIAssistant,
+    selectedSpecialtyFilter,
+    setSelectedSpecialtyFilter
   } = useDentalFlow();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedService, setSelectedService] = useState<string>('All');
+  const [selectedSpecialty, setSelectedSpecialty] = useState<string>(selectedSpecialtyFilter || 'All');
+
+  React.useEffect(() => {
+    if (selectedSpecialtyFilter) {
+      setSelectedSpecialty(selectedSpecialtyFilter);
+    }
+  }, [selectedSpecialtyFilter]);
+  const [selectedIntent, setSelectedIntent] = useState<string>('All');
   const [selectedSource, setSelectedSource] = useState<string>('All');
   const [selectedPriority, setSelectedPriority] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
@@ -41,21 +49,31 @@ export const EnquiriesPage: React.FC = () => {
 
   // Filtered list
   const filteredEnquiries = enquiries.filter((e) => {
+    const procedure = e.aiClassification.procedure || e.procedure || '';
+    const specialty = e.aiClassification.specialty || e.specialty || e.service;
+    const intent = e.aiClassification.intent || '';
+
     const matchesSearch = 
       e.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       e.enquirySummary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.fullMessage.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesService = selectedService === 'All' || e.service === selectedService;
+      e.fullMessage.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      procedure.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      specialty.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesSpecialty = selectedSpecialty === 'All' || specialty === selectedSpecialty;
+    const matchesIntent = selectedIntent === 'All' || intent === selectedIntent;
     const matchesSource = selectedSource === 'All' || e.source === selectedSource;
     const matchesPriority = selectedPriority === 'All' || e.priority === selectedPriority;
     const matchesStatus = selectedStatus === 'All' || e.status === selectedStatus;
 
-    return matchesSearch && matchesService && matchesSource && matchesPriority && matchesStatus;
+    return matchesSearch && matchesSpecialty && matchesIntent && matchesSource && matchesPriority && matchesStatus;
   });
 
   const clearFilters = () => {
     setSearchQuery('');
-    setSelectedService('All');
+    setSelectedSpecialty('All');
+    setSelectedSpecialtyFilter('All');
+    setSelectedIntent('All');
     setSelectedSource('All');
     setSelectedPriority('All');
     setSelectedStatus('All');
@@ -63,7 +81,8 @@ export const EnquiriesPage: React.FC = () => {
 
   const hasActiveFilters = 
     searchQuery !== '' || 
-    selectedService !== 'All' || 
+    selectedSpecialty !== 'All' || 
+    selectedIntent !== 'All' ||
     selectedSource !== 'All' || 
     selectedPriority !== 'All' || 
     selectedStatus !== 'All';
@@ -73,11 +92,16 @@ export const EnquiriesPage: React.FC = () => {
       {/* Header with Title and Primary Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            Enquiries & Leads
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+              Enquiries & Leads
+            </h2>
+            <span className="text-[11px] font-bold text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+              AI Procedure Triage Active
+            </span>
+          </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Manage incoming patient enquiries and keep every potential patient on track.
+            Manage incoming patient enquiries with automated procedure detection and specialty categorization.
           </p>
         </div>
 
@@ -200,25 +224,43 @@ export const EnquiriesPage: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by patient name or message..."
+            placeholder="Search patient, procedure (e.g. braces, implants), or concern..."
             className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-teal-500"
           />
         </div>
 
         {/* Filters Row */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Service filter */}
+          {/* Specialty filter */}
           <select
-            value={selectedService}
-            onChange={(e) => setSelectedService(e.target.value)}
+            value={selectedSpecialty}
+            onChange={(e) => {
+              setSelectedSpecialty(e.target.value);
+              setSelectedSpecialtyFilter(e.target.value);
+            }}
+            className="text-xs py-1.5 px-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500 font-medium"
+          >
+            <option value="All">All Specialties</option>
+            {SPECIALTY_TAXONOMY.map((r) => (
+              <option key={r.specialty} value={r.specialty}>
+                {r.specialty}
+              </option>
+            ))}
+            <option value="Needs Staff Review">Needs Staff Review</option>
+          </select>
+
+          {/* Intent filter */}
+          <select
+            value={selectedIntent}
+            onChange={(e) => setSelectedIntent(e.target.value)}
             className="text-xs py-1.5 px-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
           >
-            <option value="All">All Services</option>
-            <option value="Orthodontics">Orthodontics</option>
-            <option value="General Dentistry">General Dentistry</option>
-            <option value="Cosmetic Dentistry">Cosmetic Dentistry</option>
-            <option value="Preventive Dentistry">Preventive Dentistry</option>
-            <option value="Pediatric Dentistry">Pediatric Dentistry</option>
+            <option value="All">All Intents</option>
+            {INTENT_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
           </select>
 
           {/* Source filter */}
@@ -259,7 +301,7 @@ export const EnquiriesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Data Table */}
+      {/* Data Table with Procedure & Specialty Columns */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-subtle overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-600">
@@ -267,111 +309,130 @@ export const EnquiriesPage: React.FC = () => {
               <tr>
                 <th className="py-3 px-4">Patient / Lead</th>
                 <th className="py-3 px-4">Enquiry Summary</th>
-                <th className="py-3 px-4">Service</th>
-                <th className="py-3 px-4">Source</th>
-                <th className="py-3 px-4">AI Classification</th>
+                <th className="py-3 px-4">Detected Procedure</th>
+                <th className="py-3 px-4">Dental Specialty</th>
+                <th className="py-3 px-4">Inferred Intent</th>
                 <th className="py-3 px-4">Priority</th>
                 <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Received</th>
-                <th className="py-3 px-4">Assigned To</th>
+                <th className="py-3 px-4">Staff</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-normal">
               {filteredEnquiries.length > 0 ? (
-                filteredEnquiries.map((enquiry) => (
-                  <tr
-                    key={enquiry.id}
-                    onClick={() => setSelectedEnquiry(enquiry)}
-                    className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
-                  >
-                    {/* Patient */}
-                    <td className="py-3 px-4">
-                      <div className="font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
-                        {enquiry.patientName}
-                      </div>
-                      <div className="text-[11px] text-slate-400 font-mono">
-                        {enquiry.patientPhone}
-                      </div>
-                    </td>
+                filteredEnquiries.map((enquiry) => {
+                  const procedureName = enquiry.aiClassification.procedure || enquiry.procedure || 'General consultation';
+                  const specialtyName = enquiry.aiClassification.specialty || enquiry.specialty || enquiry.service;
+                  const isConfirmed = enquiry.aiClassification.isConfirmedByStaff;
 
-                    {/* Enquiry Excerpt */}
-                    <td className="py-3 px-4 max-w-xs">
-                      <p className="truncate text-slate-800 font-medium">
-                        {enquiry.enquirySummary}
-                      </p>
-                      <p className="truncate text-[11px] text-slate-400">
-                        {enquiry.fullMessage}
-                      </p>
-                    </td>
+                  return (
+                    <tr
+                      key={enquiry.id}
+                      onClick={() => setSelectedEnquiry(enquiry)}
+                      className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
+                    >
+                      {/* Patient */}
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                          {enquiry.patientName}
+                        </div>
+                        <div className="text-[11px] text-slate-400 font-mono">
+                          {enquiry.source} • {enquiry.receivedAt}
+                        </div>
+                      </td>
 
-                    {/* Service */}
-                    <td className="py-3 px-4">
-                      <Badge variant="service">{enquiry.service}</Badge>
-                    </td>
+                      {/* Enquiry Excerpt */}
+                      <td className="py-3 px-4 max-w-xs">
+                        <p className="truncate text-slate-800 font-medium">
+                          {enquiry.enquirySummary}
+                        </p>
+                        <p className="truncate text-[11px] text-slate-400">
+                          {enquiry.fullMessage}
+                        </p>
+                      </td>
 
-                    {/* Source */}
-                    <td className="py-3 px-4">
-                      <Badge variant="source">{enquiry.source}</Badge>
-                    </td>
+                      {/* Detected Procedure */}
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-slate-800 text-xs">
+                            {procedureName}
+                          </span>
+                          {isConfirmed && (
+                            <span title="Confirmed by staff" className="inline-flex items-center">
+                              <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                            </span>
+                          )}
+                        </div>
+                        {enquiry.aiClassification.detectedProcedures && enquiry.aiClassification.detectedProcedures.length > 1 && (
+                          <span className="text-[10px] text-teal-700 font-medium">
+                            +{enquiry.aiClassification.detectedProcedures.length - 1} more procedure
+                          </span>
+                        )}
+                      </td>
 
-                    {/* AI Classification */}
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-1.5">
-                        <Sparkles className="w-3 h-3 text-teal-600 flex-shrink-0" />
-                        <span className="font-medium text-slate-800 truncate max-w-[130px]">
+                      {/* Dental Specialty */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                          specialtyName === 'Needs Staff Review' 
+                            ? 'bg-amber-50 text-amber-800 border-amber-200' 
+                            : 'bg-teal-50 text-teal-800 border-teal-200'
+                        }`}>
+                          {specialtyName}
+                        </span>
+                      </td>
+
+                      {/* Inferred Intent */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className="text-slate-700 font-medium text-[11px] bg-slate-100 px-2 py-0.5 rounded-md">
                           {enquiry.aiClassification.intent}
                         </span>
-                      </div>
-                      <span className="text-[10px] text-teal-700">
-                        {enquiry.aiClassification.confidence}% confidence
-                      </span>
-                    </td>
+                      </td>
 
-                    {/* Priority */}
-                    <td className="py-3 px-4">
-                      <Badge variant="priority">{enquiry.priority}</Badge>
-                    </td>
+                      {/* Priority */}
+                      <td className="py-3 px-4">
+                        <Badge variant="priority">{enquiry.priority}</Badge>
+                      </td>
 
-                    {/* Status */}
-                    <td className="py-3 px-4">
-                      <Badge variant="status">{enquiry.status}</Badge>
-                    </td>
+                      {/* Status */}
+                      <td className="py-3 px-4">
+                        <Badge variant="status">{enquiry.status}</Badge>
+                      </td>
 
-                    {/* Received */}
-                    <td className="py-3 px-4 text-slate-500 whitespace-nowrap">
-                      {enquiry.receivedAt}
-                    </td>
+                      {/* Assigned Staff */}
+                      <td className="py-3 px-4 font-medium text-slate-700 whitespace-nowrap">
+                        {enquiry.assignedStaff}
+                      </td>
 
-                    {/* Assigned */}
-                    <td className="py-3 px-4 font-medium text-slate-700 whitespace-nowrap">
-                      {enquiry.assignedStaff}
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-3 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => openAIAssistant({ enquiry, objective: 'Consultation Booking Offer' })}
-                          className="p-1.5 text-teal-600 hover:text-teal-800 hover:bg-teal-50 rounded-lg transition-colors"
-                          title="Generate AI Draft"
-                        >
-                          <Sparkles className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setSelectedEnquiry(enquiry)}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      {/* Actions */}
+                      <td className="py-3 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => openAIAssistant({ 
+                              enquiry, 
+                              procedure: procedureName, 
+                              specialty: specialtyName,
+                              objective: 'Consultation Booking Offer' 
+                            })}
+                            className="p-1.5 text-teal-600 hover:text-teal-800 hover:bg-teal-50 rounded-lg transition-colors"
+                            title="Generate AI Draft"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setSelectedEnquiry(enquiry)}
+                            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400">
+                  <td colSpan={9} className="py-12 text-center text-slate-400">
                     <p className="text-sm">No enquiries match the current filters.</p>
                     <button
                       onClick={clearFilters}

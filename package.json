@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server:dev": "npm --prefix server run dev",
+    "server:build": "npm --prefix server run build",
+    "server:start": "npm --prefix server run start",
+    "server:seed": "npm --prefix server run prisma:seed"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",

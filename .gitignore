@@ -8,9 +8,25 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+server/node_modules
 dist
 dist-ssr
+server/dist
 *.local
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+!server/.env.example
+
+# Database files
+*.db
+*.db-journal
+dev.db
+server/prisma/dev.db
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +38,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+

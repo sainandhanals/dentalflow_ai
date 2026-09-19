@@ -1,4 +1,15 @@
-import { Enquiry, Patient, FollowUpTask, AutomationWorkflow, ClinicSettings } from '../types';
+import { 
+  Enquiry, 
+  Patient, 
+  FollowUpTask, 
+  AutomationWorkflow, 
+  ClinicSettings,
+  Appointment,
+  WaitlistEntry,
+  Household,
+  TreatmentPlan,
+  DentalReview
+} from '../types';
 
 export const INITIAL_SETTINGS: ClinicSettings = {
   clinicName: 'BrightSmile Dental Studio',
@@ -831,5 +842,422 @@ export const INITIAL_WORKFLOWS: AutomationWorkflow[] = [
     messageTemplate: '6-Month Routine Hygiene Checkup Reminder',
     delayHours: 4080,
     executionsCount: 57
+  }
+];
+
+// ==========================================
+// INITIAL APPOINTMENTS (FEATURE 1: NO-SHOW)
+// ==========================================
+export const INITIAL_APPOINTMENTS: Appointment[] = [
+  {
+    id: 'APT-001',
+    patientId: 'PAT-101',
+    patientName: 'Sarah Thomas',
+    date: 'Tomorrow',
+    time: '10:30 AM',
+    procedure: 'Root Canal Treatment (Tooth #19)',
+    provider: 'Dr. Maya Lin',
+    attendanceHistory: 'Sporadic past attendance (1 completed exam in 18 months)',
+    cancellationHistory: '2 previous no-shows, 1 late cancellation (< 24h notice)',
+    noShowProbability: 78,
+    riskLevel: 'High Risk',
+    riskFactors: [
+      '2 previous unexcused no-shows in past 6 months',
+      '1 previous late cancellation (< 24h notice)',
+      'Invasive dental procedure (higher patient hesitation/anxiety)',
+      'Mid-morning slot booked > 2 weeks in advance'
+    ],
+    status: 'Scheduled'
+  },
+  {
+    id: 'APT-002',
+    patientId: 'PAT-108',
+    patientName: 'Marcus Vance',
+    date: 'Tomorrow',
+    time: '02:00 PM',
+    procedure: 'Composite Filling Restoration',
+    provider: 'Dr. Alex Morgan',
+    attendanceHistory: 'Moderate consistency (2 visits in 12 months)',
+    cancellationHistory: '1 previous late reschedule',
+    noShowProbability: 54,
+    riskLevel: 'Medium Risk',
+    riskFactors: [
+      '1 previous late reschedule (< 48h notice)',
+      'Afternoon slot with moderate historical dropout'
+    ],
+    status: 'Scheduled'
+  },
+  {
+    id: 'APT-003',
+    patientId: 'PAT-110',
+    patientName: 'Priya Kumar',
+    date: 'Saturday',
+    time: '10:30 AM',
+    procedure: 'Routine Dental Cleaning & Exam',
+    provider: 'Dr. Maya Lin',
+    attendanceHistory: 'Excellent consistency (4 consecutive check-ups attended)',
+    cancellationHistory: '0 previous cancellations or no-shows',
+    noShowProbability: 12,
+    riskLevel: 'Low Risk',
+    riskFactors: [
+      'Consistent past appointment attendance',
+      'Confirmed attendance via SMS'
+    ],
+    status: 'Scheduled'
+  },
+  {
+    id: 'APT-004',
+    patientId: 'PAT-107',
+    patientName: 'Rahul Menon',
+    date: 'Friday',
+    time: '03:00 PM',
+    procedure: 'Crown Margin Evaluation',
+    provider: 'Dr. Maya Lin',
+    attendanceHistory: 'Lapsed patient returning for acute concern',
+    cancellationHistory: '1 previous no-show 8 months ago',
+    noShowProbability: 62,
+    riskLevel: 'Medium Risk',
+    riskFactors: [
+      '1 previous missed appointment',
+      'Long commute distance noted in intake file'
+    ],
+    status: 'Scheduled'
+  },
+  {
+    id: 'APT-005',
+    patientId: 'PAT-102',
+    patientName: 'Daniel Mathew',
+    date: 'Thursday',
+    time: '11:00 AM',
+    procedure: 'Implant Placement Consultation',
+    provider: 'Dr. Alex Morgan',
+    attendanceHistory: 'Irregular visits; postponed restorative stages twice',
+    cancellationHistory: '2 previous late cancellations',
+    noShowProbability: 72,
+    riskLevel: 'High Risk',
+    riskFactors: [
+      '2 previous cancellations for surgical consultations',
+      'High-complexity restorative procedure with noted dental anxiety'
+    ],
+    status: 'Scheduled'
+  },
+  {
+    id: 'APT-006',
+    patientId: 'PAT-103',
+    patientName: 'Emily Joseph',
+    date: 'Wednesday',
+    time: '04:30 PM',
+    procedure: 'Teeth Whitening In-Office Session',
+    provider: 'Dr. Maya Lin',
+    attendanceHistory: 'Active patient (wedding date deadline noted)',
+    cancellationHistory: '0 cancellations; high motivation',
+    noShowProbability: 15,
+    riskLevel: 'Low Risk',
+    riskFactors: [
+      'Pre-paid cosmetic deposit recorded',
+      'Confirmed via portal'
+    ],
+    status: 'Scheduled'
+  }
+];
+
+// ==========================================
+// INITIAL WAITLIST (FEATURE 1: AUTO-WAITLIST)
+// ==========================================
+export const INITIAL_WAITLIST: WaitlistEntry[] = [
+  {
+    id: 'WTL-001',
+    patientId: 'PAT-120',
+    patientName: 'Emily Johnson',
+    procedure: 'Dental Cleaning & Hygiene',
+    preferredDate: 'Today / Tomorrow',
+    preferredTime: 'After 2:00 PM',
+    acceptanceProbability: 94,
+    providerPreference: 'Dr. Maya Lin',
+    availability: 'Today after 2 PM',
+    urgency: 'High',
+    matchReason: 'Available today after 2 PM • Requested cleaning appointment • Same provider preference (Dr. Maya Lin)',
+    status: 'Waiting'
+  },
+  {
+    id: 'WTL-002',
+    patientId: 'PAT-107',
+    patientName: 'Rahul Menon',
+    procedure: 'Root Canal Assessment',
+    preferredDate: 'Tomorrow',
+    preferredTime: 'Flexible',
+    acceptanceProbability: 87,
+    providerPreference: 'Dr. Maya Lin',
+    availability: 'Flexible daytime',
+    urgency: 'High',
+    matchReason: 'Acute sensitivity reported • Requested same-week buffer • High proximity (5 mins from clinic)',
+    status: 'Waiting'
+  },
+  {
+    id: 'WTL-003',
+    patientId: 'PAT-121',
+    patientName: 'Ananya Thomas',
+    procedure: 'Orthodontic Consultation',
+    preferredDate: 'Tomorrow / Saturday',
+    preferredTime: 'Morning (10 AM - 12 PM)',
+    acceptanceProbability: 73,
+    providerPreference: 'Any Provider',
+    availability: 'Mornings before 12 PM',
+    urgency: 'Medium',
+    matchReason: 'Requested introductory aligner scan • Available during morning cancellations',
+    status: 'Waiting'
+  },
+  {
+    id: 'WTL-004',
+    patientId: 'PAT-104',
+    patientName: 'Arjun Nair',
+    procedure: 'Preventive Hygiene Check',
+    preferredDate: 'This Week',
+    preferredTime: 'Late Afternoon',
+    acceptanceProbability: 68,
+    providerPreference: 'Dr. Alex Morgan',
+    availability: 'Afternoons 3:00 - 5:00 PM',
+    urgency: 'Standard',
+    matchReason: 'Flexible routine cleaning standby list',
+    status: 'Waiting'
+  }
+];
+
+// ==========================================
+// INITIAL HOUSEHOLDS (FEATURE 2: BUNDLING)
+// ==========================================
+export const INITIAL_HOUSEHOLDS: Household[] = [
+  {
+    householdId: 'HSH-001',
+    householdName: 'Kumar Family',
+    scheduledCount: 1,
+    totalCount: 4,
+    suggestedDate: 'Saturday, Sep 26',
+    suggestedTime: '10:00 AM – 12:00 PM',
+    schedulingEfficiency: '3 additional family appointments grouped • 1 shared commute',
+    status: 'Opportunity Detected',
+    members: [
+      {
+        memberId: 'PAT-109',
+        name: 'Arun Kumar',
+        relationship: 'Father',
+        hasUpcomingAppointment: true,
+        procedureNeeded: 'Dental Cleaning',
+        suggestedTime: '10:00 AM',
+        status: 'Scheduled'
+      },
+      {
+        memberId: 'PAT-110',
+        name: 'Priya Kumar',
+        relationship: 'Mother',
+        hasUpcomingAppointment: false,
+        procedureNeeded: 'Dental Cleaning & Exam',
+        suggestedTime: '10:30 AM',
+        status: 'Suggested'
+      },
+      {
+        memberId: 'PAT-111',
+        name: 'Ayaan Kumar',
+        relationship: 'Son (Age 9)',
+        hasUpcomingAppointment: false,
+        procedureNeeded: 'Pediatric Checkup',
+        suggestedTime: '11:00 AM',
+        status: 'Suggested'
+      },
+      {
+        memberId: 'PAT-112',
+        name: 'Diya Kumar',
+        relationship: 'Daughter (Age 6)',
+        hasUpcomingAppointment: false,
+        procedureNeeded: 'Fluoride Treatment & Clean',
+        suggestedTime: '11:30 AM',
+        status: 'Suggested'
+      }
+    ]
+  },
+  {
+    householdId: 'HSH-002',
+    householdName: 'Patel Family',
+    scheduledCount: 1,
+    totalCount: 2,
+    suggestedDate: 'Tuesday, Sep 22',
+    suggestedTime: '02:00 PM – 03:15 PM',
+    schedulingEfficiency: '1 additional appointment grouped • Consecutive chair booking',
+    status: 'Opportunity Detected',
+    members: [
+      {
+        memberId: 'PAT-115',
+        name: 'Rajesh Patel',
+        relationship: 'Husband',
+        hasUpcomingAppointment: true,
+        procedureNeeded: 'Crown Fitting Evaluation',
+        suggestedTime: '02:00 PM',
+        status: 'Scheduled'
+      },
+      {
+        memberId: 'PAT-116',
+        name: 'Sunita Patel',
+        relationship: 'Wife',
+        hasUpcomingAppointment: false,
+        procedureNeeded: 'Periodontal Screening & Clean',
+        suggestedTime: '02:45 PM',
+        status: 'Suggested'
+      }
+    ]
+  }
+];
+
+// ==========================================
+// INITIAL TREATMENT PLANS (FEATURE 3: NUDGES)
+// ==========================================
+export const INITIAL_TREATMENT_PLANS: TreatmentPlan[] = [
+  {
+    id: 'TRP-001',
+    patientId: 'PAT-107',
+    patientName: 'Rahul Menon',
+    procedure: 'Root Canal + Crown',
+    value: 28000,
+    currency: '₹',
+    createdDate: '2026-09-13',
+    daysPending: 6,
+    status: 'Awaiting Acceptance',
+    objectionCategory: 'Cost concern',
+    recommendedApproach: 'Explain clinical value of preserving natural tooth and offer 0% interest installment plan.',
+    sequenceStatus: 'Not Generated',
+    nudgeSequence: []
+  },
+  {
+    id: 'TRP-002',
+    patientId: 'PAT-102',
+    patientName: 'Daniel Mathew',
+    procedure: 'Titanium Dental Implant',
+    value: 45000,
+    currency: '₹',
+    createdDate: '2026-09-10',
+    daysPending: 9,
+    status: 'Awaiting Acceptance',
+    objectionCategory: 'Fear/anxiety',
+    recommendedApproach: 'Reassure patient on gentle anesthesia, minimal invasiveness, and comfortable procedure pacing.',
+    sequenceStatus: 'Draft',
+    nudgeSequence: []
+  },
+  {
+    id: 'TRP-003',
+    patientId: 'PAT-103',
+    patientName: 'Emily Joseph',
+    procedure: 'Porcelain Veneers (4 Units)',
+    value: 36000,
+    currency: '₹',
+    createdDate: '2026-09-15',
+    daysPending: 4,
+    status: 'Awaiting Acceptance',
+    objectionCategory: 'Needs more information',
+    recommendedApproach: 'Provide diagnostic smile mock-up photos and ceramic shade warranty details.',
+    sequenceStatus: 'Not Generated',
+    nudgeSequence: []
+  },
+  {
+    id: 'TRP-004',
+    patientId: 'PAT-101',
+    patientName: 'Sarah Thomas',
+    procedure: 'Clear Aligners / Invisalign',
+    value: 65000,
+    currency: '₹',
+    createdDate: '2026-09-08',
+    daysPending: 11,
+    status: 'Awaiting Acceptance',
+    objectionCategory: 'Scheduling difficulty',
+    recommendedApproach: 'Emphasize flexible remote aligner check-ins with fewer required in-clinic appointments.',
+    sequenceStatus: 'Active',
+    nudgeSequence: []
+  }
+];
+
+// ==========================================
+// INITIAL REVIEWS (FEATURE 4: REVIEW INBOX)
+// ==========================================
+export const INITIAL_REVIEWS: DentalReview[] = [
+  {
+    id: 'REV-001',
+    platform: 'Google',
+    reviewerName: 'Priya K.',
+    rating: 5,
+    date: 'Yesterday',
+    sentiment: 'Positive',
+    reviewText: 'The staff were very friendly and Dr. Maya explained everything clearly.',
+    patientId: 'PAT-110',
+    patientVisitContext: {
+      patientName: 'Priya Kumar',
+      recentProcedure: 'Dental Examination & Cleaning',
+      provider: 'Dr. Maya Lin',
+      appointmentDate: '2 days ago',
+      visitCount: 4
+    },
+    approvalStatus: 'Pending Review'
+  },
+  {
+    id: 'REV-002',
+    platform: 'Google',
+    reviewerName: 'Marcus Vance',
+    rating: 2,
+    date: '3 days ago',
+    sentiment: 'Negative',
+    reviewText: 'Waited 35 minutes past my appointment time without an update. Dental work itself was fine though.',
+    patientId: 'PAT-108',
+    patientVisitContext: {
+      patientName: 'Marcus Vance',
+      recentProcedure: 'Composite Filling',
+      provider: 'Dr. Alex Morgan',
+      appointmentDate: '3 days ago',
+      visitCount: 2
+    },
+    approvalStatus: 'Pending Review'
+  },
+  {
+    id: 'REV-003',
+    platform: 'Yelp',
+    reviewerName: 'Ananya T.',
+    rating: 5,
+    date: '5 days ago',
+    sentiment: 'Positive',
+    reviewText: 'Gentle cleaning and great team. Highly recommend Dr. Maya!',
+    patientId: 'PAT-121',
+    patientVisitContext: {
+      patientName: 'Ananya Thomas',
+      recentProcedure: 'Routine Cleaning',
+      provider: 'Dr. Maya Lin',
+      appointmentDate: '5 days ago',
+      visitCount: 3
+    },
+    aiDraft: "Thank you so much, Ananya! We are thrilled to hear that your visit with Dr. Maya Lin was a positive and comfortable experience. Our entire team at BrightSmile Dental Studio appreciates your kind words and look forward to seeing you at your next routine check-up!",
+    approvalStatus: 'Approved'
+  },
+  {
+    id: 'REV-004',
+    platform: 'Google',
+    reviewerName: 'David Kim',
+    rating: 4,
+    date: '1 week ago',
+    sentiment: 'Positive',
+    reviewText: 'Good root canal care and clear explanations, but parking was tricky.',
+    patientVisitContext: {
+      provider: 'Dr. Maya Lin',
+      recentProcedure: 'Endodontic Care'
+    },
+    approvalStatus: 'Pending Review'
+  },
+  {
+    id: 'REV-005',
+    platform: 'Yelp',
+    reviewerName: 'Sophie L.',
+    rating: 5,
+    date: '2 weeks ago',
+    sentiment: 'Positive',
+    reviewText: 'My daughter loved her first pediatric visit! The team was so gentle and patient.',
+    patientVisitContext: {
+      provider: 'Dr. Alex Morgan',
+      recentProcedure: 'Pediatric First Visit'
+    },
+    approvalStatus: 'Approved'
   }
 ];

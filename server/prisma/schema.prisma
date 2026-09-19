@@ -1,0 +1,322 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Patient {
+  id               String               @id @default(uuid())
+  name             String
+  email            String
+  phone            String
+  lastAppointment  String
+  nextAppointment  String
+  engagementScore  Int                  @default(85)
+  engagementLevel  String               @default("Active") // 'Active' | 'Moderate' | 'At Risk'
+  preferredChannel String               @default("Email")  // 'Email' | 'SMS' | 'Phone'
+  lastInteraction  String
+  assignedStaff    String               @default("Dr. Sarah Wilson")
+  consentStatus    Boolean              @default(true)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  interactions     PatientInteraction[]
+  notes            PatientNote[]
+  appointments     Appointment[]
+  followUps        FollowUpTask[]
+  waitlistEntries  WaitlistEntry[]
+  treatmentPlans   TreatmentPlan[]
+}
+
+model PatientInteraction {
+  id        String   @id @default(uuid())
+  patientId String
+  date      String
+  type      String   // 'Email' | 'SMS' | 'Call' | 'In-Clinic' | 'Online Enquiry'
+  title     String
+  note      String
+  staff     String
+  createdAt DateTime @default(now())
+
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model PatientNote {
+  id        String   @id @default(uuid())
+  patientId String
+  author    String
+  text      String
+  createdAt String
+
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model Enquiry {
+  id                   String        @id @default(uuid())
+  patientName          String
+  patientEmail         String
+  patientPhone         String
+  enquirySummary       String
+  fullMessage          String
+  service              String        // DentalSpecialty
+  procedure            String?
+  specialty            String?
+  source               String        // 'Website' | 'Email' | 'Phone' | 'Referral'
+  priority             String        // 'Urgent Review' | 'High' | 'Medium' | 'Low'
+  status               String        // 'New' | 'Pending Review' | 'Follow-up Required' | 'Responded' | 'Converted' | 'Closed'
+  receivedAt           String
+  timestamp            String
+  assignedStaff        String
+  lastDraft            String?
+  isReviewed           Boolean       @default(false)
+  
+  // AI Classification Data
+  aiProcedure          String?
+  aiSpecialty          String?
+  aiIntent             String?
+  aiConfidence         Float?
+  aiConfidenceLevel    String?
+  aiSuggestedAction    String?
+  aiPriorityReasoning  String?
+  aiDetectedProcedures String?       // JSON String of DetectedProcedureItem[]
+  aiConfirmedByStaff   Boolean       @default(false)
+
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  notes                EnquiryNote[]
+  followUps            FollowUpTask[]
+}
+
+model EnquiryNote {
+  id        String   @id @default(uuid())
+  enquiryId String
+  author    String
+  text      String
+  createdAt String
+
+  enquiry   Enquiry  @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+}
+
+model Appointment {
+  id                  String   @id @default(uuid())
+  patientId           String?
+  patientName         String
+  patientPhone        String?
+  date                String
+  time                String
+  duration            Int      @default(45)
+  operatory           String   @default("Operatory 1")
+  procedure           String
+  provider            String
+  dentistName         String?
+  attendanceHistory   String   @default("3 attended, 0 missed")
+  cancellationHistory String   @default("0 late cancels")
+  noShowProbability   Float    @default(0.15)
+  noShowRiskScore     Int      @default(15)
+  leadTimeDays        Int      @default(5)
+  confirmationStatus  String   @default("unconfirmed")
+  riskLevel           String   @default("Low")
+  riskFactors         String   @default("[]") // JSON Array
+  recommendedActions  String   @default("[]") // JSON Array
+  status              String   @default("Scheduled")
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  patient             Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+}
+
+model FollowUpTask {
+  id            String   @id @default(uuid())
+  title         String
+  patientName   String
+  patientId     String?
+  enquiryId     String?
+  taskType      String   // FollowUpTaskType
+  dueDate       String
+  priority      String   // PriorityLevel
+  assignedStaff String
+  status        String   @default("scheduled") // 'due_today' | 'overdue' | 'scheduled' | 'completed'
+  notes         String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  patient       Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  enquiry       Enquiry? @relation(fields: [enquiryId], references: [id], onDelete: SetNull)
+}
+
+model WaitlistEntry {
+  id                    String   @id @default(uuid())
+  patientId             String?
+  patientName           String
+  phone                 String?
+  procedure             String
+  preferredDate         String
+  preferredTime         String
+  acceptanceProbability Float    @default(0.75)
+  matchScore            Int      @default(85)
+  distanceKm            Float    @default(3.2)
+  flexibleDays          String   @default("[]") // JSON
+  matchReasons          String   @default("[]") // JSON
+  providerPreference    String   @default("Any Available")
+  availability          String   @default("Flexible")
+  urgency               String   @default("Medium")
+  matchReason           String   @default("Routine opening matches availability")
+  status                String   @default("Waiting")
+  offerSentAt           String?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  patient               Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+}
+
+model Household {
+  id                   String            @id @default(uuid())
+  householdId          String            @unique
+  householdName        String
+  familyName           String?
+  primaryContactName   String?
+  primaryContactPhone  String?
+  address              String?
+  scheduledCount       Int               @default(1)
+  totalCount           Int               @default(3)
+  suggestedDate        String
+  suggestedTime        String
+  schedulingEfficiency String            @default("70% reduction in clinic commute")
+  bundleStatus         String            @default("pending_confirmation")
+  status               String            @default("Opportunity Detected")
+
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  members              HouseholdMember[]
+}
+
+model HouseholdMember {
+  id                       String    @id @default(uuid())
+  householdId              String
+  memberId                 String
+  name                     String
+  relationship             String
+  age                      Int?
+  isPrimary                Boolean   @default(false)
+  hasUpcomingAppointment   Boolean   @default(false)
+  procedureNeeded          String?
+  suggestedTime            String?
+  suggestedSlot            String?
+  assignedOperatory        String?
+  assignedDentist          String?
+  estimatedDurationMinutes Int       @default(45)
+  status                   String    @default("Suggested")
+
+  createdAt                DateTime  @default(now())
+
+  household                Household @relation(fields: [householdId], references: [householdId], onDelete: Cascade)
+}
+
+model TreatmentPlan {
+  id                  String         @id @default(uuid())
+  patientId           String?
+  patientName         String
+  procedure           String
+  procedureName       String?
+  toothNumber         String?
+  diagnosisDate       String?
+  value               Float
+  estimatedCost       Float?
+  currency            String         @default("$")
+  createdDate         String
+  daysPending         Int            @default(7)
+  status              String         @default("Awaiting Acceptance")
+  objectionCategory   String         @default("Cost concern")
+  objectionNotes      String?
+  recommendedStrategy String?
+  recommendedApproach String
+  sequenceStatus      String         @default("Draft")
+
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  nudgeSequence       NudgeMessage[]
+  patient             Patient?       @relation(fields: [patientId], references: [id], onDelete: SetNull)
+}
+
+model NudgeMessage {
+  id              String        @id @default(uuid())
+  treatmentPlanId String
+  stepNumber      Int           @default(1)
+  day             Int           @default(1)
+  dayOffset       Int           @default(1)
+  stage           String
+  channel         String        @default("email")
+  subject         String
+  message         String
+  body            String?
+  status          String        @default("Draft")
+
+  createdAt       DateTime      @default(now())
+
+  treatmentPlan   TreatmentPlan @relation(fields: [treatmentPlanId], references: [id], onDelete: Cascade)
+}
+
+model DentalReview {
+  id              String   @id @default(uuid())
+  platform        String   @default("Google")
+  reviewerName    String
+  authorName      String?
+  rating          Int      @default(5)
+  reviewText      String
+  date            String
+  reviewDate      String?
+  sentiment       String   @default("Positive")
+  patientId       String?
+  recentProcedure String?
+  dentist         String?
+  visitDate       String?
+  aiDraft         String?
+  aiDraftResponse String?
+  responseStatus  String   @default("draft_ready")
+  approvalStatus  String   @default("Pending Review")
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AutomationWorkflow {
+  id                    String   @id @default(uuid())
+  name                  String
+  description           String
+  trigger               String
+  condition             String
+  action                String
+  status                String   @default("active")
+  staffApprovalRequired Boolean  @default(true)
+  messageTemplate       String
+  delayHours            Int      @default(2)
+  executionsCount       Int      @default(0)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model ClinicSettings {
+  id                         String   @id @default("default-settings")
+  clinicName                 String   @default("Apex Dental Spa & Implant Center")
+  phone                      String   @default("+1 (555) 345-6789")
+  email                      String   @default("care@apexdentalcare.com")
+  operatingHours             String   @default("Mon-Fri: 8:00 AM - 6:00 PM, Sat: 9:00 AM - 2:00 PM")
+  requireStaffReview         Boolean  @default(true)
+  aiAssistanceEnabled        Boolean  @default(true)
+  inactivityThresholdDays    Int      @default(90)
+  scoringWeightVisits        Int      @default(40)
+  scoringWeightCommunication Int      @default(60)
+  demoMode                   Boolean  @default(true)
+
+  updatedAt                  DateTime @updatedAt
+}

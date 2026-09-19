@@ -9,7 +9,13 @@ import {
   BarChart2, 
   Info,
   Calendar,
-  ArrowRight
+  ArrowRight,
+  Sparkles,
+  AlertTriangle,
+  Zap,
+  FileText,
+  Star,
+  ShieldCheck
 } from 'lucide-react';
 import { SPECIALTY_TAXONOMY } from '../data/specialtyTaxonomy';
 import { 
@@ -29,7 +35,7 @@ import {
 } from 'recharts';
 
 export const AnalyticsPage: React.FC = () => {
-  const { enquiries, navigateToEnquiriesWithSpecialty, addToast } = useDentalFlow();
+  const { enquiries, followUps, overviewMetrics, isBackendLive, navigateToEnquiriesWithSpecialty, navigateToAIOperation, addToast } = useDentalFlow();
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
 
   // Chart 1: Daily volume
@@ -113,9 +119,17 @@ export const AnalyticsPage: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            Practice Engagement Analytics
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+              Practice Engagement Analytics
+            </h2>
+            {isBackendLive && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Backend Live
+              </span>
+            )}
+          </div>
           <p className="text-xs text-slate-500 mt-0.5">
             Understand enquiry trends, communication responsiveness, and lead conversion performance.
           </p>
@@ -156,7 +170,7 @@ export const AnalyticsPage: React.FC = () => {
             Total Enquiries
           </span>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">142</span>
+            <span className="text-2xl font-bold text-slate-900">{overviewMetrics?.totalEnquiries ?? enquiries.length}</span>
             <span className="text-xs font-semibold text-emerald-600">+14.2%</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-1">During selected {timeRange} window</p>
@@ -167,7 +181,9 @@ export const AnalyticsPage: React.FC = () => {
             Follow-ups Completed
           </span>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">118</span>
+            <span className="text-2xl font-bold text-slate-900">
+              {overviewMetrics?.completedFollowUps ?? followUps.filter(f => f.status === 'completed').length}
+            </span>
             <span className="text-xs font-semibold text-teal-700">83% resolution rate</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-1">Staff outreach tasks completed</p>
@@ -178,7 +194,9 @@ export const AnalyticsPage: React.FC = () => {
             Lead Conversion Rate
           </span>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">68.4%</span>
+            <span className="text-2xl font-bold text-slate-900">
+              {overviewMetrics?.conversionRate !== undefined ? `${overviewMetrics.conversionRate}%` : '68.4%'}
+            </span>
             <span className="text-xs font-semibold text-emerald-600">+5.3%</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-1">Enquiry to confirmed booking</p>
@@ -377,6 +395,172 @@ export const AnalyticsPage: React.FC = () => {
           <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-100 mt-2">
             <span>Tip: Click bar or name to filter enquiries</span>
             <span className="font-semibold text-teal-700">{totalEnquiriesCount} classified enquiries</span>
+          </div>
+        </div>
+      </div>
+
+      {/* AI Operations Intelligence Matrix */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-subtle space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-teal-600" />
+              <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                DentalFlow AI Operational Intelligence & ROI
+              </h3>
+              <span className="text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full">
+                Practice Telemetry
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Live efficiency benchmarks generated across predictive scheduling, empathetic treatment nudges, family grouping & reviews.
+            </p>
+          </div>
+
+          <button
+            onClick={() => navigateToAIOperation('no-show')}
+            className="text-xs font-semibold text-teal-600 hover:text-teal-800 flex items-center gap-1 shrink-0"
+          >
+            <span>Open AI Operations Studio</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Scheduling Defense */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between hover:border-rose-200 transition-colors">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-rose-500" /> Chair Defense
+                </span>
+                <span className="text-[10px] bg-rose-100 text-rose-700 font-bold px-1.5 py-0.5 rounded">
+                  -61% No-Shows
+                </span>
+              </div>
+              <div className="text-2xl font-bold text-slate-900">8.2%</div>
+              <p className="text-[11px] text-slate-500 mt-0.5">Projected no-show rate (down from 21.4% baseline)</p>
+              
+              <div className="mt-3 pt-2 border-t border-slate-200/60 space-y-1 text-xs">
+                <div className="flex justify-between text-slate-600">
+                  <span>Reclaimed Revenue:</span>
+                  <strong className="text-slate-900">₹1,42,000 / mo</strong>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Fast-Fill Speed:</span>
+                  <strong className="text-teal-700">2.8 mins avg</strong>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigateToAIOperation('no-show')}
+              className="mt-3 text-[11px] font-semibold text-teal-700 hover:text-teal-900 flex items-center gap-1"
+            >
+              Inspect Diagnostics →
+            </button>
+          </div>
+
+          {/* Card 2: Treatment Nudges */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between hover:border-purple-200 transition-colors">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-purple-600" /> Treatment Nudges
+                </span>
+                <span className="text-[10px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded">
+                  +28.4% Lift
+                </span>
+              </div>
+              <div className="text-2xl font-bold text-slate-900">₹4,20,000</div>
+              <p className="text-[11px] text-slate-500 mt-0.5">Active treatment pipeline under empathetic follow-up</p>
+              
+              <div className="mt-3 pt-2 border-t border-slate-200/60 space-y-1 text-xs">
+                <div className="flex justify-between text-slate-600">
+                  <span>0% EMI Adoption:</span>
+                  <strong className="text-slate-900">41.2%</strong>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Avg. Conversion:</span>
+                  <strong className="text-purple-700">5.2 days</strong>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigateToAIOperation('treatment-plans')}
+              className="mt-3 text-[11px] font-semibold text-purple-700 hover:text-purple-900 flex items-center gap-1"
+            >
+              Review Nudge Sequences →
+            </button>
+          </div>
+
+          {/* Card 3: Household Bundling */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between hover:border-indigo-200 transition-colors">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-indigo-600" /> Family Bundling
+                </span>
+                <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded">
+                  18 Bundles
+                </span>
+              </div>
+              <div className="text-2xl font-bold text-slate-900">54 Trips</div>
+              <p className="text-[11px] text-slate-500 mt-0.5">Family clinic commutes consolidated into single sessions</p>
+              
+              <div className="mt-3 pt-2 border-t border-slate-200/60 space-y-1 text-xs">
+                <div className="flex justify-between text-slate-600">
+                  <span>Chair Downtime Saved:</span>
+                  <strong className="text-slate-900">24.5 hours</strong>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Weekend Utilization:</span>
+                  <strong className="text-indigo-700">98.2%</strong>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigateToAIOperation('households')}
+              className="mt-3 text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 flex items-center gap-1"
+            >
+              Open Family Matrix →
+            </button>
+          </div>
+
+          {/* Card 4: Reputation Management */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between hover:border-amber-200 transition-colors">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                  <Star className="w-3.5 h-3.5 text-amber-500" /> Reputation Moderation
+                </span>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">
+                  100% HIPAA
+                </span>
+              </div>
+              <div className="text-2xl font-bold text-slate-900">4.8 / 5.0</div>
+              <p className="text-[11px] text-slate-500 mt-0.5">Clinic reputation score across Google & Practo reviews</p>
+              
+              <div className="mt-3 pt-2 border-t border-slate-200/60 space-y-1 text-xs">
+                <div className="flex justify-between text-slate-600">
+                  <span>Approval Turnaround:</span>
+                  <strong className="text-slate-900">1.4 hours</strong>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>De-escalation Rate:</span>
+                  <strong className="text-teal-700">92% success</strong>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigateToAIOperation('reviews')}
+              className="mt-3 text-[11px] font-semibold text-teal-700 hover:text-teal-900 flex items-center gap-1"
+            >
+              Moderate Reviews →
+            </button>
           </div>
         </div>
       </div>

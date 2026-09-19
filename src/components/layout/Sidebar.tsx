@@ -25,6 +25,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     setActivePage, 
     enquiries, 
     followUps, 
+    appointments,
+    reviews,
     settings,
     resetDemoData,
     addToast
@@ -32,9 +34,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
   const newEnquiriesCount = enquiries.filter(e => e.status === 'New').length;
   const overdueFollowUpsCount = followUps.filter(t => t.status === 'overdue').length;
+  const highRiskAppointmentsCount = appointments.filter(a => a.riskLevel === 'high' && a.status === 'scheduled').length;
+  const pendingReviewsCount = reviews.filter(r => r.responseStatus === 'draft_ready').length;
+  const aiActionCount = highRiskAppointmentsCount + pendingReviewsCount;
 
   const navItems: { id: PageId; label: string; icon: React.ElementType; badge?: number; badgeColor?: string }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { 
+      id: 'ai-operations', 
+      label: 'AI Operations', 
+      icon: Sparkles, 
+      badge: aiActionCount > 0 ? aiActionCount : undefined,
+      badgeColor: 'bg-gradient-to-r from-teal-500 to-indigo-600 text-white shadow-xs'
+    },
     { 
       id: 'enquiries', 
       label: 'Enquiries & Leads', 
